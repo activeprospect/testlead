@@ -1,6 +1,6 @@
 {
   "name": "@activeprospect/testlead",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A simple command-line utility to generate test lead posts with fake data",
   "main": "index.js",
   "scripts": {
