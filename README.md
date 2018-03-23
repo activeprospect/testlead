@@ -6,11 +6,10 @@ This LeadConduit test script takes a posting URL, and an optional list of standa
 
 Usage is: `testlead [ -o [ -b browsername ]] [ -p n ] url [ fields...]`
 
-```
-$ testlead https://next.staging.leadconduit.com/flows/549093d1600f56d6475fa79f/sources/541887ea14251b0336f9dba1/submit email first_name city postal_code
+`$ testlead https://next.staging.leadconduit.com/flows/549093d1600f56d6475fa79f/sources/541887ea14251b0336f9dba1/submit email first_name city postal_code`
 
-Lead posted for Cesar.Kulas@gmail.com to https://next.staging.leadconduit.com/flows/549093d1600f56d6475fa79f/sources/541887ea14251b0336f9dba1/submit ({"outcome":"success","lead":{"id":"5ab0239c1438145681fbc025"}})
-```
+> `Lead posted for Cesar.Kulas@gmail.com to https://next.staging.leadconduit.com/flows/549093d1600f56d6475fa79f/sources/541887ea14251b0336f9dba1/submit ({"outcome":"success","lead":{"id":"5ab0239c1438145681fbc025"}})`
+
 
 
 ### -o & -b
@@ -28,9 +27,7 @@ For example, with `-p 10`, a lead will only be posted about 10% of the time, whe
 
 The output will state when the probability isn't met:
 
-```
-Skipping post to https://next.staging.leadconduit.com/flows/549093d1600f56d6475fa79f/sources/541887ea14251b0336f9dba1/submit
-```
+> `Skipping post to https://next.staging.leadconduit.com/flows/549093d1600f56d6475fa79f/sources/541887ea14251b0336f9dba1/submit`
 
 ### fields
 
