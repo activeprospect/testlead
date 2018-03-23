@@ -1,0 +1,18 @@
+{
+  "name": "@activeprospect/testlead",
+  "version": "0.0.0",
+  "description": "A simple command-line utility to generate test lead posts with fake data",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "ISC",
+  "bin": {
+    "testlead": "./index.js"
+  },
+  "dependencies": {
+    "commander": "^2.15.0",
+    "faker": "^4.1.0",
+    "request": "^2.85.0"
+  }
+}
