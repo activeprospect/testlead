@@ -1,34 +1,56 @@
 #!/usr/bin/env node
 
+const program = require('commander');
 const faker = require('faker');
 const request = require('request');
 const {spawn} = require('child_process');
 
 const defaultFields = ['email', 'first_name', 'last_name'];
 
-let getRandomElement = function (options) {
-  return (options[Math.floor(Math.random() * options.length)]);
-};
-
 let fakeByLCName = function(lcName) {
+  let ageMagicNumber = 86;
   switch(lcName) {
-    case 'city':           return faker.address.city();
-    case 'company.name':   return faker.company.companyName();
-    case 'email':          return faker.internet.email();
-    case 'first_name':     return faker.name.firstName();
-    case 'last_name':      return faker.name.lastName();
-    case 'phone_1':        return faker.phone.phoneNumber();
-    case 'postal_code':    return faker.address.zipCode();
-    case 'street_address': return faker.address.streetAddress();
+    case 'address_1':    return faker.address.streetAddress();
+    case 'address_2':    return faker.address.secondaryAddress();
+    case 'age':          return Math.floor(Math.random() * ageMagicNumber);
+    case 'city':         return faker.address.city();
+    case 'dob':          return faker.date.past(ageMagicNumber);
+    case 'comments':     return faker.lorem.sentence();
+    case 'company.name': return faker.company.companyName();
+    case 'country':      return faker.address.country();
+    case 'email':        return faker.internet.email();
+    case 'first_name':   return faker.name.firstName();
+    case 'gender':       return faker.random.arrayElement(['female', 'male', 'other']);
+    case 'ip_address':   return faker.internet.ip();
+    case 'last_name':    return faker.name.lastName();
+    case 'phone_1':
+    case 'phone_2':
+    case 'phone_3':      return faker.phone.phoneNumber();
+    case 'reference':    return faker.random.alphaNumeric(10);
+    case 'postal_code':  return faker.address.zipCode();
+    case 'state':        return faker.address.state();
+    case 'title':        return faker.name.title();
 
     default: return `unknown_field_${lcName}`;
   }
 };
 
-let generateLead = function (fields) {
+let generateLead = function (data, fields) {
   let lead = {};
+
+  if(data) {
+    // e.g., "age=42&state=TX&loan.collateral=100000"
+    data.split("&").forEach((parameter) => {
+      let kv = parameter.split("=");
+      lead[kv[0]] = kv[1];
+    });
+  }
+
   fields.forEach((element) => {
-    lead[element] = fakeByLCName(element);
+    // don't override specified data with random values
+    if(!lead[element]) {
+      lead[element] = fakeByLCName(element);
+    }
   });
   return (lead);
 };
@@ -52,11 +74,11 @@ let openInBrowser = function (postingUrl, postResponse, browser) {
   }
 };
 
-let program = require('commander');
-let url, fields, browser;
+let url, fields, data, browser;
 
 program
   .arguments('lead-faker <posting-url> [fields...]')
+  .option('-d, --data <parameters>', 'Defined data to send as-is. Provide in curl -d style ("a=42&foo=bar")')
   .option('-p, --probability <percentage>', 'Probability % of sending anything (default: 100%)')
   .option('-o, --open', 'Open posted lead in browser (system default, or specify with -b)')
   .option('-b, --browser [browser]', 'Use given browser. Values: "Google Chrome", "Firefox", or "Safari"')
@@ -65,6 +87,7 @@ program
     if(program.open) {
       browser = program.browser || "Google Chrome";
     }
+    data = program.data;
     fields = fieldList.length ? fieldList : defaultFields;
   })
   .parse(process.argv);
@@ -76,7 +99,7 @@ if (!url || url.length === 0) {
 else {
   if (!program.probability || (Math.random() * 100) < program.probability) {
 
-    let lead = generateLead(fields);
+    let lead = generateLead(data, fields);
 
     request({
       uri: url,
