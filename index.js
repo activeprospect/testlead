@@ -77,9 +77,10 @@ let openInBrowser = function (postingUrl, postResponse, browser) {
 let url, fields, data, browser;
 
 program
-  .arguments('lead-faker <posting-url> [fields...]')
+  .arguments('testlead <posting-url> [fields...]')
   .option('-d, --data <parameters>', 'Defined data to send as-is. Provide in curl -d style ("a=42&foo=bar")')
   .option('-p, --probability <percentage>', 'Probability % of sending anything (default: 100%)')
+  .option('-v, --verbose', 'Output verbose details')
   .option('-o, --open', 'Open posted lead in browser (system default, or specify with -b)')
   .option('-b, --browser [browser]', 'Use given browser. Values: "Google Chrome", "Firefox", or "Safari"')
   .action(function (postingUrl, fieldList) {
@@ -101,11 +102,18 @@ else {
 
     let lead = generateLead(data, fields);
 
+    if (program.verbose) {
+      console.log(`POST\n\tURL: ${url}\n\tbody: ${JSON.stringify(lead)}`);
+    }
+
     request({
       uri: url,
       method: "POST",
       form: lead
     }, (err, response, body) => {
+      if (program.verbose) {
+        console.log(`response\n\tstatus: ${response.statusCode}\n\tbody: ${response.body}\n\theaders: ${JSON.stringify(response.headers)}\n\terr: ${err ? err.toString() : '(none)'}`)
+      }
       if (err || response.statusCode !== 201) {
         let code = response ? ` (${response.statusCode})` : '';
         console.error(`Error posting lead for ${lead[fields[0]]} to '${url}'${code}`, err);

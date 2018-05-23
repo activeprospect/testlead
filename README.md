@@ -18,12 +18,16 @@ Usage is: `testlead [ -d "key1=val1,key2=val2" ] [ -o [ -b browsername ]] [ -p n
 
 ### -d - define data to not fake
 
-The data sent for the _fields_ listed at the end of the command string (or the default field set, if none listed) is random, fake data. Use the `-d` option to include set, non-fake data in your test lead. For example, if your flow has a filter to reject juveniles and anyone outside of Texas, you could force those values with `-d "age=19&state=TX&foo=bar bip bap"` (note that if you provide more than value, or a value with spaces, you'll need to quote the value or escape those characters).
+The data sent for the _fields_ listed at the end of the command string (or the default field set, if none listed) is random, fake data. Use the `-d` option to include set, non-fake data in your test lead. For example, if your flow has a filter to reject juveniles and anyone outside of Texas, you could force those values with `-d "age=19&state=TX&foo=bar bip bap"` (note that if you provide more than one value, or a value with spaces, you'll need to quote the value or escape those characters).
 
 ### -o & -b - open leads in your browser
 
 Specify this flag to open the posted lead's detail in LeadConduit in your
 default browser (or in the browser you specify with `-b`).
+
+### -v - verbose
+
+Output verbose details about the request (URL and body) and response (status, body, headers, and err).
 
 ### -p - set probability to randomize repeated runs
 
