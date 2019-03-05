@@ -57,16 +57,24 @@ let generateLead = function (data, fields) {
 
 
 let openInBrowser = function (postingUrl, postResponse, browser) {
+  let preMessage = 'lead ID not found in JSON at `lead.id`; ';
   try {
+    // assume LC standard response, e.g.:
     // {"outcome":"success","lead":{"id":"5ab5191934e97719cf221ba5"}}
-    let leadId = JSON.parse(postResponse).lead.id;
+    let parsed = JSON.parse(postResponse);
+
+    let leadId = '';
+    if(parsed.lead && parsed.lead.id) {
+      leadId = parsed.lead.id;
+      preMessage = '';
+    }
     let url = postingUrl
         .replace(/\/flows.*$/, '')  // chop off from `/flows' on
         .replace('/app.', '/next.') // for production, post to app.leadconduit.com but UI is next.leadconduit.com
         .replace('/leads.', '/')    // for local dev, post to leads.leadconduit.test but UI is leadconduit.test
       + `/events/${leadId}`;
 
-    console.log(`opening ${url}`);
+    console.log(`${preMessage}opening ${url}`);
     spawn('open', ['-a', browser, url]);
   }
   catch (err) {
@@ -116,7 +124,7 @@ else {
       }
       if (err || response.statusCode !== 201) {
         let code = response ? ` (${response.statusCode})` : '';
-        console.error(`Error posting lead for ${lead[fields[0]]} to '${url}'${code}`, err);
+        console.error(`Error; expected 201 when posting lead for ${lead[fields[0]]} to '${url}'${code}`, err);
       }
       else {
         console.log(`Lead posted for ${lead[fields[0]]} to ${url} (${body})`);
