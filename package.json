@@ -12,8 +12,9 @@
     "testlead": "./index.js"
   },
   "dependencies": {
-    "commander": "^2.15.0",
+    "commander": "^4.1.1",
     "faker": "^4.1.0",
+    "moment": "2.24.0",
     "request": "^2.85.0"
   }
 }
