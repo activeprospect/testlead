@@ -9,7 +9,8 @@
   "license": "ISC",
   "repository": "https://github.com/activeprospect/testlead",
   "bin": {
-    "testlead": "./index.js"
+    "testlead": "./lib/testlead.js",
+    "testfeedback": "./lib/testfeedback.js"
   },
   "dependencies": {
     "commander": "^4.1.1",
