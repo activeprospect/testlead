@@ -1,6 +1,12 @@
-# testlead
+# testlead / testfeedback
 
-This LeadConduit test script takes a posting URL, and an optional list of standard field names. It generates fake but legitimate-looking data and posts it to the given URL.
+next time: add testfeedback to readme; fix testlead info if needed, and add npx?
+
+This LeadConduit test utility includes two scripts: `testlead` and `testfeedback`.
+
+The first, `testlead`, takes a posting URL, and an optional list of standard field names. It generates fake but legitimate-looking data and posts it to the given URL.
+
+The second, `testfeedback`, takes an ActiveProspect account API key and the BSON ID of a recipient step in a flow belonging to that account. It queries the API for a recent successful delivery to that recipient, and then posts a conversion or return to it.
 
 ## Installation
 
@@ -8,9 +14,9 @@ Suitable for global installation:
 
 `npm install -g @activeprospect/testlead`
 
-## Usage
+## Testlead Usage
 
-Usage is: `testlead [ -d "key1=val1,key2=val2" ] [ -o [ -b browsername ]] [ -p n ] url [ fields...]`
+Usage is: `testlead [ -d "key1=val1,key2=val2" ] [ -v ] [ -o [ -b browsername ]] [ -p n ] url [ fields...]`
 
 `$ testlead https://next.staging.leadconduit.com/flows/549093d1600f56d6475fa79f/sources/541887ea14251b0336f9dba1/submit email first_name city postal_code`
 
@@ -46,3 +52,31 @@ The output will state when the probability isn't met:
 The final parameter supported is a list of LeadConduit-standard fields. If not specified, the test lead will be made up of `email`, `first_name`, and `last_name`.
 
 The first parameter listed (or `email` if none are given) is used in the log output.
+
+## Testfeedback Usage
+
+Usage is `testfeedback -a api_key -i recipient_id [ -v ] [ -s ] [ -t type ] [ -r reason ]`
+
+`$ lib/testfeedback.js -a 123458c380987654321b9f696de00000 -i 5d5aaadf6c445f078efaf138 -t conversion -r "Closed won"`
+
+> `conversion of lead 5e441d293e8c493d5e30b946, with reason: 'Closed won': success`
+
+### -a - set API key
+
+This is the ActiveProspect API key for the account in which you're providing feedback, needed to query events from the API.
+
+### -i - ID of recipient
+
+This is the BSON ID of the recipient step which you're providing feedback for. To find this, you have to dig it out of the flow JSON, as queried from the API (i.e., in the browser dev-tools, an API query of the flow, or the database).
+
+### -v - verbose
+
+Output verbose details about the request and results.
+
+### -t - specify feedback type
+
+Must be one of `conversion` or `return`; default is `return`.
+
+### -r - specify feedback reason
+
+Any string to be used as the conversion or return reason text; defaults to "bad lead, boo" for returns, or "good lead, yay" for conversions.
