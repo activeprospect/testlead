@@ -69,10 +69,6 @@ This is the ActiveProspect API key for the account in which you're providing fee
 
 This is the BSON ID of the recipient step which you're providing feedback for. To find this, you have to dig it out of the flow JSON, as queried from the API (i.e., in the browser dev-tools, an API query of the flow, or the database).
 
-### -v - verbose
-
-Output verbose details about the request and results.
-
 ### -t - specify feedback type
 
 Must be one of `conversion` or `return`; default is `return`.
@@ -80,3 +76,11 @@ Must be one of `conversion` or `return`; default is `return`.
 ### -r - specify feedback reason
 
 Any string to be used as the conversion or return reason text; defaults to "bad lead, boo" for returns, or "good lead, yay" for conversions.
+
+### -p - set probability to randomize repeated runs
+
+See `testlead`, above.
+
+### -v - verbose
+
+See `testlead`, above.
