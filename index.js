@@ -1,6 +1,8 @@
-const { submitLead } = require('./lib/submitlead');
+const submitLead = require('./lib/submitlead');
+const submitFeedback = require('./lib/submitfeedback');
+const { apikey } = require('./keys');
 
-const testSubmissions = [
+const testLeadSubmissions = [
   {
     description: 'Staging Dev-Test',
     url: 'https://next.leadconduit-staging.com/flows/541afb8db91da1ce20fc6a5f/sources/550c3c06c5f57a407f5b68bb/submit',
@@ -33,12 +35,27 @@ const testSubmissions = [
   }
 ];
 
+const testFeedbackSubmissions = [
+  {
+    description: "AP Demo",
+    api_key: apikey,
+    recipient_id: "5d5aaadf6c445f078efaf138",
+    feedback_type: "conversion",
+    feedback_reason: "Closed won",
+    probability: 2
+  }
+];
+
 function lambda() {
   const fields = [ "first_name", "last_name", "email", "phone_1", "address_1", "city", "state", "postal_code", "company.name" ];
+  testLeadSubmissions.forEach(lead => {
+    console.log(`Processing test for ${lead.description} (${lead.probability}%)...`)
+    submitLead(lead.probability, lead.url, fields);
+  })
 
-  testSubmissions.forEach(submission => {
-    console.log(`Processing test for ${submission.description} (${submission.probability}%)...`)
-    submitLead(submission.probability, submission.url, fields);
+  testFeedbackSubmissions.forEach(feedback => {
+    console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`)
+    submitFeedback(feedback);
   })
 }
 
