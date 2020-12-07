@@ -1,5 +1,5 @@
-const submitLead = require('./lib/submitlead');
-const submitFeedback = require('./lib/submitfeedback');
+const { submitLead } = require('./lib/submitlead');
+const { submitFeedback } = require('./lib/submitfeedback');
 const { apikey } = require('./keys');
 
 const testLeadSubmissions = [
@@ -49,7 +49,7 @@ const testFeedbackSubmissions = [
 function lambda() {
   const fields = [ "first_name", "last_name", "email", "phone_1", "address_1", "city", "state", "postal_code", "company.name" ];
   testLeadSubmissions.forEach(lead => {
-    console.log(`Processing test for ${lead.description} (${lead.probability}%)...`)
+    console.log(`Processing lead for ${lead.description} (${lead.probability}%)...`)
     submitLead(lead.probability, lead.url, fields);
   })
 
