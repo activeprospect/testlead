@@ -85,9 +85,9 @@ See `testlead`, above.
 
 ## Lambda execution
 
-In addition to being an interactive tool to send test leads and feedback, we also use this tool internally to automate sending test data into some demo or test flows. This code is deployed to AWS Lambda, where regular CloudWatch/EventBridge events trigger the execution of the `lambda()` function defined in `index.js`, which runs the test-data creation tasks formerly scripted via cron on LC staging.
+In addition to being an interactive tool to send test leads and feedback, we also use this tool internally to automate sending test data into some demo or test flows. This code is deployed to AWS Lambda (LC staging account), where regular CloudWatch/EventBridge events trigger the execution of the `lambda()` function defined in `index.js`. That runs the test-data creation tasks formerly scripted via cron on `staging1.ap`.
 
-Note that use of feedback in lambda requires the presence of `keys.json` in the root directory of the deployed package, with your LeadConduit API key defined, like this:
+Note that use of feedback in Lambda requires the presence of `keys.json` in the root directory of the deployed package, with your LeadConduit API key defined, like this:
 
 ```
 {
