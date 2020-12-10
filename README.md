@@ -1,7 +1,5 @@
 # testlead / testfeedback
 
-next time: add testfeedback to readme; fix testlead info if needed, and add npx?
-
 This LeadConduit test utility includes two scripts: `testlead` and `testfeedback`.
 
 The first, `testlead`, takes a posting URL, and an optional list of standard field names. It generates fake but legitimate-looking data and posts it to the given URL.
@@ -84,3 +82,15 @@ See `testlead`, above.
 ### -v - verbose
 
 See `testlead`, above.
+
+## Lambda execution
+
+In addition to being an interactive tool to send test leads and feedback, we also use this tool internally to automate sending test data into a couple [demo](https://next.leadconduit.com/flows/541c67415fc1e8567ac27304) and [test](https://next.leadconduit-staging.com/flows/541afb8db91da1ce20fc6a5f) flows. This code is deployed to AWS Lambda (LC staging account), where regular CloudWatch/EventBridge events trigger the execution of the `lambda()` function defined in `index.js`. That runs the test-data creation tasks formerly scripted via cron on `staging1.ap`.
+
+Note that use of feedback in Lambda requires the presence of `keys.json` in the root directory of the deployed package, with your LeadConduit API key defined, like this:
+
+```
+{
+  "apikey": "your_lc_api_key_here"
+}
+```
