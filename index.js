@@ -45,10 +45,10 @@ const testLeadSubmissions = [
 const testFeedbackSubmissions = [
   {
     description: "AP Demo",
-    api_key: apikey,
-    recipient_id: "5d5aaadf6c445f078efaf138",
-    feedback_type: "conversion",
-    feedback_reason: "Closed won",
+    apiKey: apikey,
+    recipientId: "5d5aaadf6c445f078efaf138",
+    feedbackType: "conversion",
+    feedbackReason: "Closed won",
     probability: 2
   }
 ];
