@@ -2,9 +2,6 @@
   "name": "@activeprospect/testlead",
   "version": "0.2.0",
   "description": "A simple command-line utility to generate test lead posts with fake data",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "license": "ISC",
   "repository": "https://github.com/activeprospect/testlead",
   "bin": {
@@ -12,6 +9,7 @@
     "testfeedback": "./lib/testfeedback.js"
   },
   "dependencies": {
+    "aws-sdk": "^2.1051.0",
     "commander": "^4.1.1",
     "faker": "^4.1.0",
     "moment": "2.24.0",
