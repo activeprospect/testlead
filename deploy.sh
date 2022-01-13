@@ -10,7 +10,7 @@ then
 fi
 
 echo "creating function.zip..."
-zip -r9 function.zip lib demoConfig/keys.json node_modules index.js package.json package-lock.json > /dev/null
+zip -r function.zip lib demoConfig/keys.json node_modules index.js package.json package-lock.json > /dev/null
 
 echo "updating function at AWS..."
 aws lambda --region us-east-1 update-function-code --function-name $functionName --zip-file fileb://function.zip
