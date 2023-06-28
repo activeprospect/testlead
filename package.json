@@ -1,6 +1,6 @@
 {
   "name": "@activeprospect/testlead",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A simple command-line utility to generate test lead posts with fake data",
   "license": "ISC",
   "repository": "https://github.com/activeprospect/testlead",
@@ -12,7 +12,7 @@
     "aws-sdk": "^2.1051.0",
     "commander": "^4.1.1",
     "faker": "^4.1.0",
-    "moment": "2.24.0",
+    "moment": "^2.29.4",
     "request": "^2.85.0"
   }
 }
