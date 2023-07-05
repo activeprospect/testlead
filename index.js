@@ -14,9 +14,9 @@ function demoLeads(config) {
 }
 
 function demoFeedbacks(config) {
-  const { apikey } = require('./demoConfig/keys.json');
+  const keys = require('./demoConfig/keys.json');
   config.forEach(feedback => {
-    feedback.apiKey = apikey;
+    feedback.apiKey = keys[feedback.accountname];
     console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`)
     submitFeedback(feedback);
   });

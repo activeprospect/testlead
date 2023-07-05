@@ -85,7 +85,7 @@ See `testlead`, above.
 
 ## Lambda execution
 
-In addition to being an interactive tool to send test leads and feedback, this tool is also used internally to automate sending test data into a [developer test flow](https://next.leadconduit-staging.com/flows/541afb8db91da1ce20fc6a5f) and some sales demo flows in the "ActiveProspect, Inc. Demo" account. This code is run from AWS (in the **LeadConduit staging** account), where CloudWatch/EventBridge triggers a Lambda execution every minute (the `lambda()` function is defined in `index.js`). 
+In addition to being an interactive tool to send test leads and feedback, this tool is also used internally to automate sending test data into a [developer test flow](https://next.leadconduit-staging.com/flows/541afb8db91da1ce20fc6a5f) and some sales demo flows in the "ActiveProspect, Inc. Demo" account. This code is run from AWS (in the **LeadConduit staging** account), where CloudWatch/EventBridge triggers execution of the Lambda [test-sales-and-dev-leads](https://us-east-1.console.aws.amazon.com/lambda/home?region=us-east-1#/functions/test-sales-and-dev-leads?tab=monitoring) every minute (the `lambda()` function is defined in `index.js`).
 
 Configuration for these submissions is controlled by two JSON files, read from the S3 bucket [`sales-and-dev-leads-config`](https://s3.console.aws.amazon.com/s3/buckets/sales-and-dev-leads-config?region=us-east-1&tab=objects) (also in the **LeadConduit staging** account): `leadSubmissions.json` and `feedbackSubmissions.json`. Examples of the format expected can be found in the manual/test invocation script `lib/manualdemo.js`.
 
