@@ -54,23 +54,24 @@ describe('submitlead', () => {
   });
 
   describe('submitLead', () => {
-    it('skips posting when the probability is not met', () => {
+    it('skips posting when the probability is not met', async () => {
       let callbackCalled = false;
-      submitLead({ url: 'http://example.com/submit', probability: 0 }, () => {
+      await submitLead({ url: 'http://example.com/submit', probability: 0 }, () => {
         callbackCalled = true;
       });
       expect(callbackCalled).to.equal(false);
     });
 
-    it('does not post when the url is missing', () => {
+    it('does not post when the url is missing', async () => {
       const scope = nock('http://example.com').post('/submit').reply(200, '{}');
-      submitLead({ url: '', probability: 100 });
+      await submitLead({ url: '', probability: 100 });
       expect(scope.isDone()).to.equal(false);
       nock.cleanAll();
     });
 
-    it('posts a form-encoded lead and invokes the callback on success', (done) => {
+    it('posts a form-encoded lead and invokes the callback on success', async () => {
       let postedBody;
+      let callbackBody;
       const scope = nock('http://example.com')
         .post('/submit', (body) => {
           postedBody = body;
@@ -78,15 +79,14 @@ describe('submitlead', () => {
         })
         .reply(201, '{"outcome":"success","lead":{"id":"abc123"}}');
 
-      submitLead(
+      await submitLead(
         { url: 'http://example.com/submit', fields: ['email'], probability: 100 },
-        (body) => {
-          expect(scope.isDone()).to.equal(true);
-          expect(postedBody).to.have.property('email');
-          expect(body).to.contain('success');
-          done();
-        }
+        (body) => { callbackBody = body; }
       );
+
+      expect(scope.isDone()).to.equal(true);
+      expect(postedBody).to.have.property('email');
+      expect(callbackBody).to.contain('success');
     });
   });
 });

@@ -9,16 +9,13 @@ describe('submitfeedback', () => {
     nock.cleanAll();
   });
 
-  it('skips when the probability is not met', (done) => {
+  it('skips when the probability is not met', async () => {
     const scope = nock(PROD_BASE).get(/\/events/).query(true).reply(200, '[]');
-    submitFeedback({ apiKey: 'key', recipientId: 'r1', probability: 0 });
-    setTimeout(() => {
-      expect(scope.isDone()).to.equal(false);
-      done();
-    }, 50);
+    await submitFeedback({ apiKey: 'key', recipientId: 'r1', probability: 0 });
+    expect(scope.isDone()).to.equal(false);
   });
 
-  it('queries events then posts feedback for a returned event', (done) => {
+  it('queries events then posts feedback for a returned event', async () => {
     const events = nock(PROD_BASE)
       .get('/events')
       .query(true)
@@ -27,11 +24,9 @@ describe('submitfeedback', () => {
     const feedback = nock(PROD_BASE)
       .post('/feedback')
       .query({ event_id: 'evt-1' })
-      .reply(201, () => {
-        return JSON.stringify({ outcome: 'success', lead: { id: 'lead-1' } });
-      });
+      .reply(201, JSON.stringify({ outcome: 'success', lead: { id: 'lead-1' } }));
 
-    submitFeedback({
+    await submitFeedback({
       apiKey: 'key',
       recipientId: 'r1',
       feedbackType: 'return',
@@ -39,40 +34,28 @@ describe('submitfeedback', () => {
       probability: 100
     });
 
-    const check = () => {
-      if (events.isDone() && feedback.isDone()) {
-        done();
-      } else {
-        setTimeout(check, 10);
-      }
-    };
-    check();
+    expect(events.isDone()).to.equal(true);
+    expect(feedback.isDone()).to.equal(true);
   });
 
-  it('does not post feedback when no events are found', (done) => {
+  it('does not post feedback when no events are found', async () => {
     const events = nock(PROD_BASE).get('/events').query(true).reply(200, '[]');
     const feedback = nock(PROD_BASE).post('/feedback').query(true).reply(201, '{}');
 
-    submitFeedback({ apiKey: 'key', recipientId: 'r1', probability: 100 });
+    await submitFeedback({ apiKey: 'key', recipientId: 'r1', probability: 100 });
 
-    setTimeout(() => {
-      expect(events.isDone()).to.equal(true);
-      expect(feedback.isDone()).to.equal(false);
-      done();
-    }, 50);
+    expect(events.isDone()).to.equal(true);
+    expect(feedback.isDone()).to.equal(false);
   });
 
-  it('targets the staging host when staging is set', (done) => {
+  it('targets the staging host when staging is set', async () => {
     const events = nock('https://app.leadconduit-staging.com')
       .get('/events')
       .query(true)
       .reply(200, '[]');
 
-    submitFeedback({ apiKey: 'key', recipientId: 'r1', probability: 100, staging: true });
+    await submitFeedback({ apiKey: 'key', recipientId: 'r1', probability: 100, staging: true });
 
-    setTimeout(() => {
-      expect(events.isDone()).to.equal(true);
-      done();
-    }, 50);
+    expect(events.isDone()).to.equal(true);
   });
 });
