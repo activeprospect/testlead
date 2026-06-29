@@ -1,9 +1,8 @@
 const { submitLead } = require('./lib/submitlead');
 const { submitFeedback } = require('./lib/submitfeedback');
-const AWS = require('aws-sdk');
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 
-AWS.config.update({region: 'us-west-1'});
-s3 = new AWS.S3({apiVersion: '2006-03-01'});
+const s3 = new S3Client({});
 
 function demoLeads(config) {
   config.forEach(lead => {
@@ -22,33 +21,27 @@ function demoFeedbacks(config) {
   });
 }
 
-function lambda() {
+async function getConfig(bucket, key) {
+  const response = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  const body = await response.Body.transformToString('utf-8');
+  return JSON.parse(body);
+}
+
+async function lambda() {
   const bucket = 'sales-and-dev-leads-config';
   const leadConfig = 'leadSubmissions.json';
   const feedbackConfig = 'feedbackSubmissions.json';
 
   try {
-    s3.getObject({Bucket: bucket, Key: leadConfig}, function(err, data) {
-      if (err) {
-        console.log(`Error from s3.getObject (${bucket}/${leadConfig})`, err);
-      } else {
-        demoLeads(JSON.parse(data.Body.toString('utf-8')));
-      }
-    });
+    demoLeads(await getConfig(bucket, leadConfig));
   } catch (e) {
-    console.log(`Unable to load lead submission configuration from S3 (${bucket}/${leadConfig})`, e);
+    console.log(`Error loading lead submission configuration from S3 (${bucket}/${leadConfig})`, e);
   }
 
   try {
-    s3.getObject({Bucket: bucket, Key: feedbackConfig}, function(err, data) {
-      if (err) {
-        console.log(`Error from s3.getObject (${bucket}/${feedbackConfig})`, err);
-      } else {
-        demoFeedbacks(JSON.parse(data.Body.toString('utf-8')));
-      }
-    });
+    demoFeedbacks(await getConfig(bucket, feedbackConfig));
   } catch (e) {
-    console.log(`Unable to load lead submission configuration from S3 (${bucket}/${feedbackConfig})`, e);
+    console.log(`Error loading feedback submission configuration from S3 (${bucket}/${feedbackConfig})`, e);
   }
 }
 
