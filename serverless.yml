@@ -4,6 +4,10 @@ frameworkVersion: "3"
 
 package:
   individually: true
+  # serverless-plugin-include-dependencies excludes node_modules then adds back
+  # only the files the handler actually requires, so dev dependencies are never
+  # bundled. excludeDevDependencies is left false to defer entirely to the
+  # plugin (and skip Serverless's own slower dev-dependency pruning pass).
   excludeDevDependencies: false
 
 plugins:

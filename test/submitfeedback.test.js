@@ -21,8 +21,12 @@ describe('submitfeedback', () => {
       .query(true)
       .reply(200, JSON.stringify([{ id: 'evt-1' }]));
 
+    let postedBody;
     const feedback = nock(PROD_BASE)
-      .post('/feedback')
+      .post('/feedback', (body) => {
+        postedBody = body;
+        return true;
+      })
       .query({ event_id: 'evt-1' })
       .reply(201, JSON.stringify({ outcome: 'success', lead: { id: 'lead-1' } }));
 
@@ -30,12 +34,16 @@ describe('submitfeedback', () => {
       apiKey: 'key',
       recipientId: 'r1',
       feedbackType: 'return',
-      feedbackReason: 'bad lead',
+      feedbackReason: 'bad & wrong',
       probability: 100
     });
 
     expect(events.isDone()).to.equal(true);
     expect(feedback.isDone()).to.equal(true);
+    // the reason contains '&' and a space; if it were not form-url-encoded the
+    // body would parse into extra/garbled keys. nock decodes the wire body, so
+    // a clean round-trip proves it was encoded correctly.
+    expect(postedBody).to.deep.equal({ type: 'return', reason: 'bad & wrong' });
   });
 
   it('does not post feedback when no events are found', async () => {
