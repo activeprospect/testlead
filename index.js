@@ -37,16 +37,35 @@ async function lambda() {
   const leadConfig = 'leadSubmissions.json';
   const feedbackConfig = 'feedbackSubmissions.json';
 
+  // The config-load and submission phases are kept in separate try/catch blocks
+  // so a failed S3 read is reported distinctly from a failure while processing
+  // the (successfully fetched) config.
+  let leadCfg;
   try {
-    await demoLeads(await getConfig(bucket, leadConfig));
+    leadCfg = await getConfig(bucket, leadConfig);
   } catch (e) {
     console.log(`Error loading lead submission configuration from S3 (${bucket}/${leadConfig})`, e);
   }
+  if (leadCfg) {
+    try {
+      await demoLeads(leadCfg);
+    } catch (e) {
+      console.log(`Error processing lead submissions`, e);
+    }
+  }
 
+  let feedbackCfg;
   try {
-    await demoFeedbacks(await getConfig(bucket, feedbackConfig));
+    feedbackCfg = await getConfig(bucket, feedbackConfig);
   } catch (e) {
     console.log(`Error loading feedback submission configuration from S3 (${bucket}/${feedbackConfig})`, e);
+  }
+  if (feedbackCfg) {
+    try {
+      await demoFeedbacks(feedbackCfg);
+    } catch (e) {
+      console.log(`Error processing feedback submissions`, e);
+    }
   }
 }
 
