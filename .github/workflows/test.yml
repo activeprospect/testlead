@@ -1,0 +1,53 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          always-auth: true
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          scope: "@activeprospect"
+          cache: 'npm'
+      - run: npm ci
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm test
+
+  validate-serverless-template:
+    name: validate serverless template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          always-auth: true
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          scope: "@activeprospect"
+          cache: 'npm'
+      - run: npm ci
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # The bundling plugin statically resolves require('./demoConfig/keys.json'),
+      # so a placeholder must exist for packaging to succeed. Real keys are
+      # injected from a secret only at deploy time.
+      - name: Write placeholder demoConfig/keys.json
+        run: |
+          mkdir -p demoConfig
+          echo '{}' > demoConfig/keys.json
+      - run: npm i -g osls@3.70.0
+      - run: serverless package --stage staging
+        env:
+          AWS_REGION: 'us-east-1'
+          AWS_ACCOUNT_ID: '000000000000'

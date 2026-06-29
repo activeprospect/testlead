@@ -1,0 +1,33 @@
+service: test-sales-and-dev-leads
+
+frameworkVersion: "3"
+
+package:
+  individually: true
+  excludeDevDependencies: false
+
+plugins:
+  - serverless-plugin-include-dependencies
+
+provider:
+  name: aws
+  stage: staging
+  region: us-east-1
+  runtime: nodejs24.x
+  architecture: x86_64
+  memorySize: 128
+  timeout: 60
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource: arn:aws:s3:::sales-and-dev-leads-config/*
+
+functions:
+  testLeads:
+    name: test-sales-and-dev-leads
+    handler: index.lambda
+    events:
+      - schedule: rate(1 minute)
