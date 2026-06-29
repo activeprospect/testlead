@@ -97,4 +97,18 @@ Note that use of automated **feedback** by that Lambda function also requires th
 }
 ```
 
-Updates can be deployed based on the script `deploy.sh`. 
+### Deployment
+
+Updates are deployed by the **Deploy test-sales-and-dev-leads to Staging AWS Account** GitHub Action (`.github/workflows/deploy-staging.yml`), triggered manually via `workflow_dispatch`. It packages and deploys the Lambda with [`osls`](https://github.com/oss-serverless/serverless) from `serverless.yml`, which codifies the runtime (`nodejs24.x`), the S3 read permission, and the every-minute schedule. The `demoConfig/keys.json` file is injected at deploy time from the `TESTLEAD_DEMO_KEYS` repository secret.
+
+The legacy `deploy.sh` script (which only ran `update-function-code`) is deprecated and kept solely as a break-glass fallback.
+
+#### One-time cutover to `osls`
+
+The original function and its every-minute trigger were created outside CloudFormation, so the first `osls deploy` cannot adopt them. Before the first deploy, perform this one-time cutover in the **LeadConduit staging** account (`us-east-1`):
+
+1. Delete the manually-created EventBridge rule `test-sales-and-staging-leads` (its only target is this Lambda, so nothing else depends on it).
+2. Delete the existing `test-sales-and-dev-leads` Lambda function.
+3. Run the deploy workflow. CloudFormation then creates the function and its own schedule rule fresh, fully stack-managed.
+
+This causes a brief gap (a couple of skipped synthetic submissions) while the function is recreated, which is harmless for this staging test-data generator. After the cutover, the schedule is owned by the stack — do not recreate the manual rule.
