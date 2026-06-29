@@ -8,11 +8,19 @@
     "testlead": "./lib/testlead.js",
     "testfeedback": "./lib/testfeedback.js"
   },
+  "scripts": {
+    "test": "mocha test/"
+  },
   "dependencies": {
     "aws-sdk": "^2.1051.0",
     "commander": "^4.1.1",
     "faker": "^4.1.0",
     "moment": "^2.29.4",
     "request": "^2.85.0"
+  },
+  "devDependencies": {
+    "chai": "4.5.0",
+    "mocha": "11.7.6",
+    "nock": "14.0.16"
   }
 }
