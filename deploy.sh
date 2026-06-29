@@ -1,3 +1,9 @@
+# DEPRECATED: This manual deploy script is superseded by the osls-based
+# GitHub Actions workflow at .github/workflows/deploy-staging.yml, which
+# deploys via serverless.yml. Prefer running that workflow (workflow_dispatch)
+# so the runtime and infrastructure stay codified. This script is kept only
+# as a break-glass fallback.
+
 functionName=test-sales-and-dev-leads
 
 echo "checking AWS authentication..."
