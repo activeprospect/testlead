@@ -5,6 +5,18 @@ const s3Response = (config) => ({
   Body: { transformToString: () => Promise.resolve(JSON.stringify(config)) }
 });
 
+// lambda() is intentionally fire-and-forget (relies on the Lambda event loop
+// draining), so poll for the asynchronous side effects instead of awaiting.
+const waitFor = (predicate, timeout = 1000) => new Promise((resolve, reject) => {
+  const start = Date.now();
+  const check = () => {
+    if (predicate()) return resolve();
+    if (Date.now() - start > timeout) return reject(new Error('timed out waiting for condition'));
+    setTimeout(check, 10);
+  };
+  check();
+});
+
 describe('index lambda', () => {
   let originalSend;
   let originalLog;
@@ -36,9 +48,9 @@ describe('index lambda', () => {
       return Promise.reject(new Error('feedback read skipped for test'));
     };
 
-    await demoRunner.lambda();
+    demoRunner.lambda();
 
-    expect(calls).to.have.lengthOf(2);
+    await waitFor(() => calls.length === 2);
     calls.forEach((c) => expect(c.Bucket).to.equal('sales-and-dev-leads-config'));
     const keys = calls.map((c) => c.Key);
     expect(keys).to.include('leadSubmissions.json');
@@ -53,8 +65,8 @@ describe('index lambda', () => {
       return Promise.reject(new Error('feedback read skipped for test'));
     };
 
-    await demoRunner.lambda();
+    demoRunner.lambda();
 
-    expect(logged.some((line) => line.includes('Processing lead for Staging Dev-Test'))).to.equal(true);
+    await waitFor(() => logged.some((line) => line.includes('Processing lead for Staging Dev-Test')));
   });
 });
