@@ -19,6 +19,7 @@
   "dependencies": {
     "@activeprospect/request-capture": "^6.3.4",
     "@aws-sdk/client-s3": "3.1075.0",
+    "@aws-sdk/client-ssm": "3.1075.0",
     "@faker-js/faker": "8.4.1",
     "commander": "^4.1.1"
   },

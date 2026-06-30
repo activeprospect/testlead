@@ -1,5 +1,6 @@
 const { submitLead } = require('./lib/submitlead');
 const { submitFeedback } = require('./lib/submitfeedback');
+const { getDemoKeys } = require('./lib/demokeys');
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3 = new S3Client({});
@@ -12,8 +13,8 @@ function demoLeads (config) {
   }));
 }
 
-function demoFeedbacks (config) {
-  const keys = require('./demoConfig/keys.json');
+async function demoFeedbacks (config) {
+  const keys = await getDemoKeys();
   return Promise.all(config.map(feedback => {
     feedback.apiKey = keys[feedback.accountname];
     console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`);

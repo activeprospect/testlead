@@ -21,6 +21,14 @@ provider:
   architecture: x86_64
   memorySize: 128
   timeout: 60
+  environment:
+    # Demo API keys (account name -> LeadConduit API key). Resolution mirrors
+    # lib/demokeys.js precedence: an explicit DEMO_KEYS env var wins, otherwise
+    # the SSM SecureString (Doppler-managed) is read by the deploying identity at
+    # deploy time, otherwise '{}'. The env fallback lets `serverless package` run
+    # credential-free (the CI validate job sets DEMO_KEYS); a real deploy leaves
+    # it unset so the value comes from SSM. lib/demokeys.js reads this at runtime.
+    DEMO_KEYS: ${env:DEMO_KEYS, ssm:/test-sales-and-dev-leads/DEMO_KEYS, '{}'}
   iam:
     role:
       statements:
