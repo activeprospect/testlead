@@ -70,4 +70,19 @@ describe('index lambda', () => {
 
     expect(logged.some((line) => line.includes('Processing lead for Staging Dev-Test'))).to.equal(true);
   });
+
+  it('skips feedback when no API key maps to the account', async () => {
+    // DEMO_KEYS is '{}' (set in beforeEach), so no account resolves a key.
+    S3Client.prototype.send = function (command) {
+      if (command.input.Key === 'feedbackSubmissions.json') {
+        return Promise.resolve(s3Response([{ description: 'No-Key Feedback', accountname: 'missing', probability: 100 }]));
+      }
+      return Promise.reject(new Error('lead read skipped for test'));
+    };
+
+    await demoRunner.lambda();
+
+    expect(logged.some((line) => line.includes("Skipping feedback for No-Key Feedback: no API key for account 'missing'"))).to.equal(true);
+    expect(logged.some((line) => line.includes('Processing feedback for No-Key Feedback'))).to.equal(false);
+  });
 });

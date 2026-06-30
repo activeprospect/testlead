@@ -17,6 +17,12 @@ async function demoFeedbacks (config) {
   const keys = await getDemoKeys();
   return Promise.all(config.map(feedback => {
     feedback.apiKey = keys[feedback.accountname];
+    if (!feedback.apiKey) {
+      // Fail fast rather than firing an unauthenticated request that would just
+      // return a confusing 401/403.
+      console.log(`Skipping feedback for ${feedback.description}: no API key for account '${feedback.accountname}'`);
+      return Promise.resolve();
+    }
     console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`);
     return submitFeedback(feedback);
   }));
