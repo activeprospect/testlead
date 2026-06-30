@@ -40,15 +40,12 @@ jobs:
       - run: npm ci
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      # The bundling plugin statically resolves require('./demoConfig/keys.json'),
-      # so a placeholder must exist for packaging to succeed. Real keys are
-      # injected from a secret only at deploy time.
-      - name: Write placeholder demoConfig/keys.json
-        run: |
-          mkdir -p demoConfig
-          echo '{}' > demoConfig/keys.json
       - run: npm i -g osls@3.70.0
+      # DEMO_KEYS is set here so serverless.yml resolves it from the env (the
+      # first source in ${env:DEMO_KEYS, ssm:..., '{}'}) and never calls AWS,
+      # letting packaging run without credentials.
       - run: serverless package --stage staging
         env:
           AWS_REGION: 'us-east-1'
           AWS_ACCOUNT_ID: '000000000000'
+          DEMO_KEYS: '{}'
