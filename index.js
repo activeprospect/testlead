@@ -4,24 +4,24 @@ const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3 = new S3Client({});
 
-function demoLeads(config) {
+function demoLeads (config) {
   return Promise.all(config.map(lead => {
-    if(!lead.fields) lead.fields = [ "first_name", "last_name", "email", "phone_1", "address_1", "city", "state", "postal_code", "company.name" ];
+    if (!lead.fields) lead.fields = ['first_name', 'last_name', 'email', 'phone_1', 'address_1', 'city', 'state', 'postal_code', 'company.name'];
     console.log(`Processing lead for ${lead.description} (${lead.probability}%)...`);
     return submitLead(lead);
   }));
 }
 
-function demoFeedbacks(config) {
+function demoFeedbacks (config) {
   const keys = require('./demoConfig/keys.json');
   return Promise.all(config.map(feedback => {
     feedback.apiKey = keys[feedback.accountname];
-    console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`)
+    console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`);
     return submitFeedback(feedback);
   }));
 }
 
-function getConfig(bucket, key) {
+function getConfig (bucket, key) {
   return s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
     .then((response) => response.Body.transformToString('utf-8'))
     .then((body) => JSON.parse(body));
@@ -32,7 +32,7 @@ function getConfig(bucket, key) {
 // where an async handler freezes the execution environment as soon as its
 // promise resolves (the event loop is not drained), so any unawaited HTTP
 // would otherwise be cut off mid-flight.
-async function lambda() {
+async function lambda () {
   const bucket = 'sales-and-dev-leads-config';
   const leadConfig = 'leadSubmissions.json';
   const feedbackConfig = 'feedbackSubmissions.json';
@@ -50,7 +50,7 @@ async function lambda() {
     try {
       await demoLeads(leadCfg);
     } catch (e) {
-      console.log(`Error processing lead submissions`, e);
+      console.log('Error processing lead submissions', e);
     }
   }
 
@@ -64,7 +64,7 @@ async function lambda() {
     try {
       await demoFeedbacks(feedbackCfg);
     } catch (e) {
-      console.log(`Error processing feedback submissions`, e);
+      console.log('Error processing feedback submissions', e);
     }
   }
 }
@@ -73,4 +73,4 @@ module.exports = {
   lambda,
   demoLeads,
   demoFeedbacks
-}
+};

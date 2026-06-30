@@ -9,7 +9,9 @@
     "testfeedback": "./lib/testfeedback.js"
   },
   "scripts": {
-    "test": "mocha test/"
+    "test": "mocha test/",
+    "lint": "eslint .",
+    "fixlint": "eslint --fix ."
   },
   "engines": {
     "node": ">=24"
@@ -22,6 +24,12 @@
   },
   "devDependencies": {
     "chai": "4.5.0",
+    "eslint": "8.57.1",
+    "eslint-config-semistandard": "17.0.0",
+    "eslint-config-standard": "17.1.0",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-n": "15.7.0",
+    "eslint-plugin-promise": "6.6.0",
     "mocha": "11.7.6",
     "nock": "14.0.16",
     "serverless-plugin-include-dependencies": "6.1.1"

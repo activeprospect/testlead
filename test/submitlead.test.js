@@ -18,8 +18,8 @@ describe('submitlead', () => {
     knownFields.forEach((field) => {
       it(`returns a defined value for '${field}'`, () => {
         const value = fakeByLCName(field);
-        expect(value).to.not.be.undefined;
-        expect(value).to.not.be.null;
+        expect(value).to.not.equal(undefined);
+        expect(value).to.not.equal(null);
       });
     });
 
