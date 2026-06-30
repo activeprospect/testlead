@@ -66,4 +66,23 @@ describe('submitfeedback', () => {
 
     expect(events.isDone()).to.equal(true);
   });
+
+  it('does not log the API key in verbose mode', async () => {
+    const secret = 'super-secret-api-key';
+    nock(PROD_BASE).get('/events').query(true).reply(200, '[]');
+
+    const logged = [];
+    const originalLog = console.log;
+    console.log = (...args) => logged.push(args.join(' '));
+    try {
+      await submitFeedback({ apiKey: secret, recipientId: 'r1', probability: 100, verbose: true });
+    } finally {
+      console.log = originalLog;
+    }
+
+    const output = logged.join('\n');
+    expect(output).to.contain('query options');
+    expect(output).to.not.contain(secret);
+    expect(output).to.contain('[REDACTED]');
+  });
 });
