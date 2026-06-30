@@ -89,19 +89,32 @@ In addition to being an interactive tool to send test leads and feedback, this t
 
 Configuration for these submissions is controlled by two JSON files, read from the S3 bucket [`sales-and-dev-leads-config`](https://s3.console.aws.amazon.com/s3/buckets/sales-and-dev-leads-config?region=us-east-1&tab=objects) (also in the **LeadConduit staging** account): `leadSubmissions.json` and `feedbackSubmissions.json`. Examples of the format expected can be found in the manual/test invocation script `lib/manualdemo.js`.
 
-Note that use of automated **feedback** by that Lambda function also requires the presence of `demoConfig/keys.json` in the deployed package, with your LeadConduit API key defined, like this:
+Automated **feedback** also needs the demo API keys: a JSON map of account name to LeadConduit API key, matching the `accountname` values in `feedbackSubmissions.json`:
 
 ```
 {
-  "apikey": "your_lc_api_key_here"
+  "ActiveProspect, Inc.": "your_lc_api_key_here",
+  "ActiveProspect, Inc. Demo": "another_lc_api_key"
 }
 ```
 
+These keys are no longer bundled into the deploy artifact. They live in the AWS SSM SecureString parameter `/test-sales-and-dev-leads/DEMO_KEYS` in the **LeadConduit staging** account (Doppler is the source of truth and syncs into SSM). At deploy time `serverless.yml` reads the parameter and injects it as the Lambda's `DEMO_KEYS` environment variable, which `lib/demokeys.js` reads at runtime.
+
+#### Local key resolution
+
+When you run the keys-dependent code locally (e.g. `lib/manualdemo.js`), `getDemoKeys()` resolves the map with this precedence:
+
+1. `DEMO_KEYS` — inline JSON in the environment (e.g. via `doppler run`). Highest priority.
+2. A local JSON file — `DEMO_KEYS_FILE` if set, otherwise `demoConfig/keys.json` (the previous local-dev workflow).
+3. AWS SSM — reads `/test-sales-and-dev-leads/DEMO_KEYS` using your default AWS credentials. If you are not logged in, it prints guidance: run `aws sso login --profile <profile>` (or `aws_auth`) and set `AWS_PROFILE` to select your role, then retry.
+
+Configuration knobs (all optional): `DEMO_KEYS`, `DEMO_KEYS_FILE`, `DEMO_KEYS_SSM_PARAM` (default `/test-sales-and-dev-leads/DEMO_KEYS`), `DEMO_KEYS_SOURCE` (force `env` | `file` | `ssm`), and `DEMO_KEYS_DISABLE_SSM` (skip the SSM fallback, e.g. offline/CI). Standard AWS env (`AWS_PROFILE`, `AWS_REGION`) governs which role/region the SSM read uses.
+
 ### Deployment
 
-Updates are deployed by the **Deploy test-sales-and-dev-leads to Staging AWS Account** GitHub Action (`.github/workflows/deploy-staging.yml`), triggered manually via `workflow_dispatch`. It packages and deploys the Lambda with [`osls`](https://github.com/oss-serverless/serverless) from `serverless.yml`, which codifies the runtime (`nodejs24.x`), the S3 read permission, and the every-minute schedule. The `demoConfig/keys.json` file is injected at deploy time from the `TESTLEAD_DEMO_KEYS` repository secret.
+Updates are deployed by the **Deploy test-sales-and-dev-leads to Staging AWS Account** GitHub Action (`.github/workflows/deploy-staging.yml`), triggered manually via `workflow_dispatch`. It packages and deploys the Lambda with [`osls`](https://github.com/oss-serverless/serverless) from `serverless.yml`, which codifies the runtime (`nodejs24.x`), the S3 read permission, the every-minute schedule, and the `DEMO_KEYS` environment variable (sourced from SSM). The workflow authenticates to AWS via GitHub OIDC, assuming the dedicated least-privilege `testlead-deployer` role — there are no long-lived AWS keys stored as secrets. The only repository secret it needs is `NPM_TOKEN` (to install the private dependency).
 
-The legacy `deploy.sh` script (which only ran `update-function-code`) is deprecated and kept solely as a break-glass fallback.
+If you ever need to deploy outside CI (break-glass), authenticate to the **LeadConduit staging** account locally (`aws sso login` / `aws_auth`) and run `osls deploy --stage staging` from a checkout. The retired `deploy.sh` script (which only ran `update-function-code` and could not set the SSM-injected `DEMO_KEYS`) has been removed in favor of this path.
 
 #### One-time cutover to `osls`
 
