@@ -4,6 +4,13 @@ frameworkVersion: "3"
 
 package:
   individually: true
+  # Never bundle local demo keys into the artifact. demoConfig/keys.json is
+  # gitignored but may still exist in a break-glass local checkout; Serverless
+  # does not honor .gitignore, and getDemoKeys() prefers a local file over
+  # Secrets Manager. Excluding it guarantees the deployed Lambda always resolves
+  # keys from Secrets Manager at runtime.
+  patterns:
+    - '!demoConfig/**'
   # serverless-plugin-include-dependencies excludes node_modules then adds back
   # only the files the handler actually requires, so dev dependencies are never
   # bundled. excludeDevDependencies is left false to defer entirely to the
