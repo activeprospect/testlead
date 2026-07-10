@@ -56,6 +56,40 @@ describe('submitfeedback', () => {
     expect(feedback.isDone()).to.equal(false);
   });
 
+  it('logs and skips (does not throw) when the events response is not valid JSON', async () => {
+    const events = nock(PROD_BASE).get('/events').query(true).reply(200, '<html>gateway error</html>');
+    const feedback = nock(PROD_BASE).post('/feedback').query(true).reply(201, '{}');
+
+    const errors = [];
+    const originalError = console.error;
+    console.error = (...args) => errors.push(args.join(' '));
+    try {
+      await submitFeedback({ apiKey: 'key', recipientId: 'r1', probability: 100 });
+    } finally {
+      console.error = originalError;
+    }
+
+    expect(events.isDone()).to.equal(true);
+    expect(feedback.isDone()).to.equal(false);
+    expect(errors.join('\n')).to.match(/Error parsing events response/);
+  });
+
+  it('does not throw when the feedback response is not valid JSON', async () => {
+    nock(PROD_BASE).get('/events').query(true).reply(200, JSON.stringify([{ id: 'evt-1' }]));
+    nock(PROD_BASE).post('/feedback').query(true).reply(201, 'not json');
+
+    const logged = [];
+    const originalLog = console.log;
+    console.log = (...args) => logged.push(args.join(' '));
+    try {
+      await submitFeedback({ apiKey: 'key', recipientId: 'r1', feedbackType: 'return', feedbackReason: 'boo', probability: 100 });
+    } finally {
+      console.log = originalLog;
+    }
+
+    expect(logged.join('\n')).to.match(/response could not be parsed/);
+  });
+
   it('targets the staging host when staging is set', async () => {
     const events = nock('https://app.leadconduit-staging.com')
       .get('/events')
