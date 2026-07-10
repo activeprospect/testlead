@@ -98,7 +98,7 @@ Automated **feedback** also needs the demo API keys: a JSON map of account name 
 }
 ```
 
-These keys are no longer bundled into the deploy artifact. They live in the AWS SSM SecureString parameter `/test-sales-and-dev-leads/DEMO_KEYS` in the **LeadConduit staging** account (Doppler is the source of truth and syncs into SSM). At deploy time `serverless.yml` reads the parameter and injects it as the Lambda's `DEMO_KEYS` environment variable, which `lib/demokeys.js` reads at runtime.
+These keys are not bundled into the deploy artifact and are never placed in the Lambda's environment. They live in an AWS Secrets Manager secret (`leadconduit-lambdas/staging/test-sales-and-dev-leads`) in the **LeadConduit staging** account, whose value is a JSON map of the shape above. Doppler is the source of truth and syncs into Secrets Manager (project `leadconduit-lambdas`). At runtime the Lambda calls `GetSecretValue` (via `lib/demokeys.js`) using its function role; only the non-sensitive secret id is exposed as the `DEMO_KEYS_SECRET_ID` environment variable.
 
 #### Local key resolution
 
@@ -106,15 +106,15 @@ When you run the keys-dependent code locally (e.g. `lib/manualdemo.js`), `getDem
 
 1. `DEMO_KEYS` — inline JSON in the environment (e.g. via `doppler run`). Highest priority.
 2. A local JSON file — `DEMO_KEYS_FILE` if set, otherwise `demoConfig/keys.json` (the previous local-dev workflow).
-3. AWS SSM — reads `/test-sales-and-dev-leads/DEMO_KEYS` using your default AWS credentials. If you are not logged in, it prints guidance: run `aws sso login --profile <profile>` (or `aws_auth`) and set `AWS_PROFILE` to select your role, then retry.
+3. AWS Secrets Manager — reads the `DEMO_KEYS_SECRET_ID` secret (default `leadconduit-lambdas/staging/test-sales-and-dev-leads`) using your default AWS credentials. This is the source the deployed Lambda uses. If you are not logged in, it prints guidance: run `aws sso login --profile <profile>` (or `aws_auth`) and set `AWS_PROFILE` to select your role, then retry.
 
-Configuration knobs (all optional): `DEMO_KEYS`, `DEMO_KEYS_FILE`, `DEMO_KEYS_SSM_PARAM` (default `/test-sales-and-dev-leads/DEMO_KEYS`), `DEMO_KEYS_SOURCE` (force `env` | `file` | `ssm`), and `DEMO_KEYS_DISABLE_SSM` (skip the SSM fallback, e.g. offline/CI). Standard AWS env (`AWS_PROFILE`, `AWS_REGION`) governs which role/region the SSM read uses.
+Configuration knobs (all optional): `DEMO_KEYS`, `DEMO_KEYS_FILE`, `DEMO_KEYS_SECRET_ID` (default `leadconduit-lambdas/staging/test-sales-and-dev-leads`), `DEMO_KEYS_SOURCE` (force `env` | `file` | `secretsmanager`), and `DEMO_KEYS_DISABLE_AWS` (skip the Secrets Manager fallback, e.g. offline/CI). Standard AWS env (`AWS_PROFILE`, `AWS_REGION`) governs which role/region the Secrets Manager read uses.
 
 ### Deployment
 
-Updates are deployed by the **Deploy test-sales-and-dev-leads to Staging AWS Account** GitHub Action (`.github/workflows/deploy-staging.yml`), triggered manually via `workflow_dispatch`. It packages and deploys the Lambda with [`osls`](https://github.com/oss-serverless/serverless) from `serverless.yml`, which codifies the runtime (`nodejs24.x`), the S3 read permission, the every-minute schedule, and the `DEMO_KEYS` environment variable (sourced from SSM). The workflow authenticates to AWS via GitHub OIDC, assuming the dedicated least-privilege `testlead-deployer` role — there are no long-lived AWS keys stored as secrets. The only repository secret it needs is `NPM_TOKEN` (to install the private dependency).
+Updates are deployed by the **Deploy test-sales-and-dev-leads to Staging AWS Account** GitHub Action (`.github/workflows/deploy-staging.yml`), triggered manually via `workflow_dispatch`. It packages and deploys the Lambda with [`osls`](https://github.com/oss-serverless/serverless) from `serverless.yml`, which codifies the runtime (`nodejs24.x`), the S3 read permission, the `secretsmanager:GetSecretValue` permission on the demo-keys secret, the every-minute schedule, and the `DEMO_KEYS_SECRET_ID` environment variable (the secret id only — never the keys). No secret is resolved at deploy time; the Lambda reads the demo keys from Secrets Manager at runtime. The workflow authenticates to AWS via GitHub OIDC, assuming the dedicated least-privilege `testlead-deployer` role — there are no long-lived AWS keys stored as secrets. The only repository secret it needs is `NPM_TOKEN` (to install the private dependency).
 
-If you ever need to deploy outside CI (break-glass), authenticate to the **LeadConduit staging** account locally (`aws sso login` / `aws_auth`) and run `osls deploy --stage staging` from a checkout. The retired `deploy.sh` script (which only ran `update-function-code` and could not set the SSM-injected `DEMO_KEYS`) has been removed in favor of this path.
+If you ever need to deploy outside CI (break-glass), authenticate to the **LeadConduit staging** account locally (`aws sso login` / `aws_auth`) and run `osls deploy --stage staging` from a checkout. The retired `deploy.sh` script (which only ran `update-function-code`) has been removed in favor of this path.
 
 #### One-time cutover to `osls`
 
