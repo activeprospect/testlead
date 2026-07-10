@@ -2,17 +2,19 @@ const { expect } = require('chai');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { SSMClient } = require('@aws-sdk/client-ssm');
+const { SecretsManagerClient } = require('@aws-sdk/client-secrets-manager');
 
 const { getDemoKeys } = require('../lib/demokeys');
 
 const DEMO_KEYS_ENV_VARS = [
   'DEMO_KEYS',
   'DEMO_KEYS_FILE',
-  'DEMO_KEYS_SSM_PARAM',
+  'DEMO_KEYS_SECRET_ID',
   'DEMO_KEYS_SOURCE',
-  'DEMO_KEYS_DISABLE_SSM'
+  'DEMO_KEYS_DISABLE_AWS'
 ];
+
+const DEFAULT_SECRET_ID = 'leadconduit-lambdas/staging/test-sales-and-dev-leads';
 
 describe('demokeys getDemoKeys', () => {
   let savedEnv;
@@ -29,7 +31,7 @@ describe('demokeys getDemoKeys', () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'demokeys-'));
     process.env.DEMO_KEYS_FILE = path.join(tmpDir, 'does-not-exist.json');
 
-    originalSend = SSMClient.prototype.send;
+    originalSend = SecretsManagerClient.prototype.send;
     originalError = console.error;
     errors = [];
     console.error = (...args) => errors.push(args.join(' '));
@@ -40,7 +42,7 @@ describe('demokeys getDemoKeys', () => {
       if (savedEnv[k] === undefined) delete process.env[k];
       else process.env[k] = savedEnv[k];
     });
-    SSMClient.prototype.send = originalSend;
+    SecretsManagerClient.prototype.send = originalSend;
     console.error = originalError;
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -67,31 +69,30 @@ describe('demokeys getDemoKeys', () => {
     expect(thrown.message).to.match(/DEMO_KEYS from the DEMO_KEYS environment variable is not valid JSON/);
   });
 
-  it('falls back to SSM when neither env nor file resolve', async () => {
+  it('falls back to Secrets Manager when neither env nor file resolve', async () => {
     let sentCommand;
-    SSMClient.prototype.send = async function (command) {
+    SecretsManagerClient.prototype.send = async function (command) {
       sentCommand = command;
-      return { Parameter: { Value: JSON.stringify({ 'SSM Acct': 'key-ssm' }) } };
+      return { SecretString: JSON.stringify({ 'SM Acct': 'key-sm' }) };
     };
     const keys = await getDemoKeys();
-    expect(keys).to.deep.equal({ 'SSM Acct': 'key-ssm' });
-    expect(sentCommand.input.Name).to.equal('/test-sales-and-dev-leads/DEMO_KEYS');
-    expect(sentCommand.input.WithDecryption).to.equal(true);
+    expect(keys).to.deep.equal({ 'SM Acct': 'key-sm' });
+    expect(sentCommand.input.SecretId).to.equal(DEFAULT_SECRET_ID);
   });
 
-  it('honors DEMO_KEYS_SSM_PARAM for the SSM fallback', async () => {
-    process.env.DEMO_KEYS_SSM_PARAM = '/custom/param';
+  it('honors DEMO_KEYS_SECRET_ID for the Secrets Manager fetch', async () => {
+    process.env.DEMO_KEYS_SECRET_ID = 'custom/secret';
     let sentCommand;
-    SSMClient.prototype.send = async function (command) {
+    SecretsManagerClient.prototype.send = async function (command) {
       sentCommand = command;
-      return { Parameter: { Value: '{}' } };
+      return { SecretString: '{}' };
     };
     await getDemoKeys();
-    expect(sentCommand.input.Name).to.equal('/custom/param');
+    expect(sentCommand.input.SecretId).to.equal('custom/secret');
   });
 
   it('prints actionable guidance and rethrows on a credentials error', async () => {
-    SSMClient.prototype.send = async function () {
+    SecretsManagerClient.prototype.send = async function () {
       const e = new Error('Could not load credentials from any providers');
       e.name = 'CredentialsProviderError';
       throw e;
@@ -103,10 +104,10 @@ describe('demokeys getDemoKeys', () => {
     expect(errors.join('\n')).to.match(/AWS_PROFILE/);
   });
 
-  it('skips SSM and fails fast when DEMO_KEYS_DISABLE_SSM is set', async () => {
-    process.env.DEMO_KEYS_DISABLE_SSM = '1';
-    SSMClient.prototype.send = async function () {
-      throw new Error('SSM should not be called when disabled');
+  it('skips Secrets Manager and fails fast when DEMO_KEYS_DISABLE_AWS is set', async () => {
+    process.env.DEMO_KEYS_DISABLE_AWS = '1';
+    SecretsManagerClient.prototype.send = async function () {
+      throw new Error('Secrets Manager should not be called when disabled');
     };
     let thrown;
     try { await getDemoKeys(); } catch (e) { thrown = e; }
@@ -129,14 +130,14 @@ describe('demokeys getDemoKeys', () => {
       expect(thrown.message).to.match(/DEMO_KEYS_SOURCE=env was forced/);
     });
 
-    it('forces the ssm source even when DEMO_KEYS is present', async () => {
-      process.env.DEMO_KEYS_SOURCE = 'ssm';
+    it('forces the secretsmanager source even when DEMO_KEYS is present', async () => {
+      process.env.DEMO_KEYS_SOURCE = 'secretsmanager';
       process.env.DEMO_KEYS = JSON.stringify({ ignored: 'env' });
-      SSMClient.prototype.send = async function () {
-        return { Parameter: { Value: JSON.stringify({ from: 'ssm' }) } };
+      SecretsManagerClient.prototype.send = async function () {
+        return { SecretString: JSON.stringify({ from: 'sm' }) };
       };
       const keys = await getDemoKeys();
-      expect(keys).to.deep.equal({ from: 'ssm' });
+      expect(keys).to.deep.equal({ from: 'sm' });
     });
 
     it('rejects an unknown forced source', async () => {

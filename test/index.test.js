@@ -12,7 +12,7 @@ describe('index lambda', () => {
   let demoRunner;
 
   let savedDemoKeys;
-  let savedDisableSsm;
+  let savedDisableAws;
 
   beforeEach(() => {
     originalSend = S3Client.prototype.send;
@@ -20,11 +20,11 @@ describe('index lambda', () => {
     logged = [];
     console.log = (...args) => logged.push(args.join(' '));
     // Guard the keys resolver so feedback processing can never fall through to a
-    // live SSM/AWS call during tests.
+    // live Secrets Manager/AWS call during tests.
     savedDemoKeys = process.env.DEMO_KEYS;
-    savedDisableSsm = process.env.DEMO_KEYS_DISABLE_SSM;
+    savedDisableAws = process.env.DEMO_KEYS_DISABLE_AWS;
     process.env.DEMO_KEYS = '{}';
-    process.env.DEMO_KEYS_DISABLE_SSM = '1';
+    process.env.DEMO_KEYS_DISABLE_AWS = '1';
     delete require.cache[require.resolve('../index')];
     demoRunner = require('../index');
   });
@@ -34,8 +34,8 @@ describe('index lambda', () => {
     console.log = originalLog;
     if (savedDemoKeys === undefined) delete process.env.DEMO_KEYS;
     else process.env.DEMO_KEYS = savedDemoKeys;
-    if (savedDisableSsm === undefined) delete process.env.DEMO_KEYS_DISABLE_SSM;
-    else process.env.DEMO_KEYS_DISABLE_SSM = savedDisableSsm;
+    if (savedDisableAws === undefined) delete process.env.DEMO_KEYS_DISABLE_AWS;
+    else process.env.DEMO_KEYS_DISABLE_AWS = savedDisableAws;
   });
 
   it('reads both config objects from the correct S3 bucket and keys', async () => {

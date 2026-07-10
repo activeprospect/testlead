@@ -41,11 +41,9 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm i -g osls@3.70.0
-      # DEMO_KEYS is set here so serverless.yml resolves it from the env (the
-      # first source in ${env:DEMO_KEYS, ssm:..., '{}'}) and never calls AWS,
-      # letting packaging run without credentials.
+      # serverless.yml no longer resolves any deploy-time variable (the secret
+      # is fetched at runtime via Secrets Manager), so packaging needs no AWS
+      # credentials.
       - run: serverless package --stage staging
         env:
           AWS_REGION: 'us-east-1'
-          AWS_ACCOUNT_ID: '000000000000'
-          DEMO_KEYS: '{}'

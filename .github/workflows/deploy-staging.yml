@@ -28,8 +28,9 @@ jobs:
         run: npm ci --ignore-scripts
 
       # Assume the dedicated least-privilege deploy role via GitHub OIDC. No
-      # long-lived AWS keys are stored as secrets. The role resolves the SSM
-      # DEMO_KEYS parameter at deploy time and creates/updates the stack.
+      # long-lived AWS keys are stored as secrets. The role only creates/updates
+      # the stack; no secret is resolved at deploy time (the Lambda reads the
+      # demo keys from Secrets Manager at runtime via its own function role).
       - name: Configure AWS Credentials Action For GitHub Actions
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
