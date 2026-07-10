@@ -69,6 +69,17 @@ describe('demokeys getDemoKeys', () => {
     expect(thrown.message).to.match(/DEMO_KEYS from the DEMO_KEYS environment variable is not valid JSON/);
   });
 
+  it('does not echo the raw DEMO_KEYS value or parse detail when it is malformed', async () => {
+    // Malformed JSON carrying a sentinel that must never appear in the thrown
+    // error (guards against re-introducing the JSON.parse detail leak).
+    process.env.DEMO_KEYS = '{"leak":"SENTINEL_SECRET';
+    let thrown;
+    try { await getDemoKeys(); } catch (e) { thrown = e; }
+    expect(thrown).to.be.an('error');
+    expect(thrown.message).to.not.contain('SENTINEL_SECRET');
+    expect(thrown.message).to.equal('DEMO_KEYS from the DEMO_KEYS environment variable is not valid JSON');
+  });
+
   it('falls back to Secrets Manager when neither env nor file resolve', async () => {
     let sentCommand;
     SecretsManagerClient.prototype.send = async function (command) {
@@ -144,7 +155,7 @@ describe('demokeys getDemoKeys', () => {
       process.env.DEMO_KEYS_SOURCE = 'bogus';
       let thrown;
       try { await getDemoKeys(); } catch (e) { thrown = e; }
-      expect(thrown.message).to.match(/Unknown DEMO_KEYS_SOURCE 'bogus'/);
+      expect(thrown.message).to.match(/Unknown DEMO_KEYS_SOURCE; expected env\|file\|secretsmanager/);
     });
   });
 });
