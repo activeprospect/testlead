@@ -89,12 +89,39 @@ In addition to being an interactive tool to send test leads and feedback, this t
 
 Configuration for these submissions is controlled by two JSON files, read from the S3 bucket [`sales-and-dev-leads-config`](https://s3.console.aws.amazon.com/s3/buckets/sales-and-dev-leads-config?region=us-east-1&tab=objects) (also in the **LeadConduit staging** account): `leadSubmissions.json` and `feedbackSubmissions.json`. Examples of the format expected can be found in the manual/test invocation script `lib/manualdemo.js`.
 
-Note that use of automated **feedback** by that Lambda function also requires the presence of `demoConfig/keys.json` in the deployed package, with your LeadConduit API key defined, like this:
+Automated **feedback** also needs the demo API keys: a JSON map of account name to LeadConduit API key, matching the `accountname` values in `feedbackSubmissions.json`:
 
 ```
 {
-  "apikey": "your_lc_api_key_here"
+  "ActiveProspect, Inc.": "your_lc_api_key_here",
+  "ActiveProspect, Inc. Demo": "another_lc_api_key"
 }
 ```
 
-Updates can be deployed based on the script `deploy.sh`. 
+These keys are not bundled into the deploy artifact and are never placed in the Lambda's environment. They live in an AWS Secrets Manager secret (`leadconduit-lambdas-staging-testlead-doppler`) in the **LeadConduit staging** account. Doppler is the source of truth and syncs into Secrets Manager via a single-secret sync of the `leadconduit-lambdas` project's `staging_testlead` config, so the secret's value is a JSON object of that config's keys — the map above is stored (as a JSON string) under the `DEMO_KEYS` key, alongside Doppler's `DOPPLER_*` metadata keys. At runtime the Lambda calls `GetSecretValue` (via `lib/demokeys.js`) using its function role, unwraps the `DEMO_KEYS` entry, and parses it; only the non-sensitive secret id is exposed as the `DEMO_KEYS_SECRET_ID` environment variable.
+
+#### Local key resolution
+
+When you run the keys-dependent code locally (e.g. `lib/manualdemo.js`), `getDemoKeys()` resolves the map with this precedence:
+
+1. `DEMO_KEYS` — inline JSON in the environment (e.g. via `doppler run`). Highest priority.
+2. A local JSON file — `DEMO_KEYS_FILE` if set, otherwise `demoConfig/keys.json` (the previous local-dev workflow).
+3. AWS Secrets Manager — reads the `DEMO_KEYS_SECRET_ID` secret (default `leadconduit-lambdas-staging-testlead-doppler`) using your default AWS credentials, unwrapping the `DEMO_KEYS` key from the Doppler-synced payload. This is the source the deployed Lambda uses. If you are not logged in, it prints guidance: run `aws sso login --profile <profile>` (or `aws_auth`) and set `AWS_PROFILE` to select your role, then retry.
+
+Configuration knobs (all optional): `DEMO_KEYS`, `DEMO_KEYS_FILE`, `DEMO_KEYS_SECRET_ID` (default `leadconduit-lambdas-staging-testlead-doppler`), `DEMO_KEYS_SOURCE` (force `env` | `file` | `secretsmanager`), and `DEMO_KEYS_DISABLE_AWS` (skip the Secrets Manager fallback, e.g. offline/CI). Standard AWS env (`AWS_PROFILE`, `AWS_REGION`) governs which role/region the Secrets Manager read uses.
+
+### Deployment
+
+Updates are deployed by the **Deploy test-sales-and-dev-leads to Staging AWS Account** GitHub Action (`.github/workflows/deploy-staging.yml`), triggered manually via `workflow_dispatch`. It packages and deploys the Lambda with [`osls`](https://github.com/oss-serverless/serverless) from `serverless.yml`, which codifies the runtime (`nodejs24.x`), the S3 read permission, the `secretsmanager:GetSecretValue` permission on the demo-keys secret, the every-minute schedule, and the `DEMO_KEYS_SECRET_ID` environment variable (the secret id only — never the keys). No secret is resolved at deploy time; the Lambda reads the demo keys from Secrets Manager at runtime. The workflow authenticates to AWS via GitHub OIDC, assuming the dedicated least-privilege `testlead-deployer` role — there are no long-lived AWS keys stored as secrets. The only repository secret it needs is `NPM_TOKEN` (to install the private dependency).
+
+If you ever need to deploy outside CI (break-glass), authenticate to the **LeadConduit staging** account locally (`aws sso login` / `aws_auth`) and run `osls deploy --stage staging` from a checkout. The retired `deploy.sh` script (which only ran `update-function-code`) has been removed in favor of this path.
+
+#### One-time cutover to `osls`
+
+The original function and its every-minute trigger were created outside CloudFormation, so the first `osls deploy` cannot adopt them. Before the first deploy, perform this one-time cutover in the **LeadConduit staging** account (`us-east-1`):
+
+1. Delete the manually-created EventBridge rule `test-sales-and-staging-leads` (its only target is this Lambda, so nothing else depends on it).
+2. Delete the existing `test-sales-and-dev-leads` Lambda function.
+3. Run the deploy workflow. CloudFormation then creates the function and its own schedule rule fresh, fully stack-managed.
+
+This causes a brief gap (a couple of skipped synthetic submissions) while the function is recreated, which is harmless for this staging test-data generator. After the cutover, the schedule is owned by the stack — do not recreate the manual rule.

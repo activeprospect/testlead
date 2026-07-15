@@ -1,54 +1,78 @@
 const { submitLead } = require('./lib/submitlead');
 const { submitFeedback } = require('./lib/submitfeedback');
-const AWS = require('aws-sdk');
+const { getDemoKeys } = require('./lib/demokeys');
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 
-AWS.config.update({region: 'us-west-1'});
-s3 = new AWS.S3({apiVersion: '2006-03-01'});
+const s3 = new S3Client({});
 
-function demoLeads(config) {
-  config.forEach(lead => {
-    if(!lead.fields) lead.fields = [ "first_name", "last_name", "email", "phone_1", "address_1", "city", "state", "postal_code", "company.name" ];
+function demoLeads (config) {
+  return Promise.all(config.map(lead => {
+    if (!lead.fields) lead.fields = ['first_name', 'last_name', 'email', 'phone_1', 'address_1', 'city', 'state', 'postal_code', 'company.name'];
     console.log(`Processing lead for ${lead.description} (${lead.probability}%)...`);
-    submitLead(lead);
-  });
+    return submitLead(lead);
+  }));
 }
 
-function demoFeedbacks(config) {
-  const keys = require('./demoConfig/keys.json');
-  config.forEach(feedback => {
+async function demoFeedbacks (config) {
+  const keys = await getDemoKeys();
+  return Promise.all(config.map(feedback => {
     feedback.apiKey = keys[feedback.accountname];
-    console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`)
-    submitFeedback(feedback);
-  });
+    if (!feedback.apiKey) {
+      // Fail fast rather than firing an unauthenticated request that would just
+      // return a confusing 401/403.
+      console.log(`Skipping feedback for ${feedback.description}: no API key for account '${feedback.accountname}'`);
+      return Promise.resolve();
+    }
+    console.log(`Processing feedback for ${feedback.description} (${feedback.probability}%)...`);
+    return submitFeedback(feedback);
+  }));
 }
 
-function lambda() {
+function getConfig (bucket, key) {
+  return s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
+    .then((response) => response.Body.transformToString('utf-8'))
+    .then((body) => JSON.parse(body));
+}
+
+// Async handler: awaits both the S3 reads and every downstream post so the
+// promise only settles once all work is done. This is important on Lambda,
+// where an async handler freezes the execution environment as soon as its
+// promise resolves (the event loop is not drained), so any unawaited HTTP
+// would otherwise be cut off mid-flight.
+async function lambda () {
   const bucket = 'sales-and-dev-leads-config';
   const leadConfig = 'leadSubmissions.json';
   const feedbackConfig = 'feedbackSubmissions.json';
 
+  // The config-load and submission phases are kept in separate try/catch blocks
+  // so a failed S3 read is reported distinctly from a failure while processing
+  // the (successfully fetched) config.
+  let leadCfg;
   try {
-    s3.getObject({Bucket: bucket, Key: leadConfig}, function(err, data) {
-      if (err) {
-        console.log(`Error from s3.getObject (${bucket}/${leadConfig})`, err);
-      } else {
-        demoLeads(JSON.parse(data.Body.toString('utf-8')));
-      }
-    });
+    leadCfg = await getConfig(bucket, leadConfig);
   } catch (e) {
-    console.log(`Unable to load lead submission configuration from S3 (${bucket}/${leadConfig})`, e);
+    console.log(`Error loading lead submission configuration from S3 (${bucket}/${leadConfig})`, e);
+  }
+  if (leadCfg) {
+    try {
+      await demoLeads(leadCfg);
+    } catch (e) {
+      console.log('Error processing lead submissions', e);
+    }
   }
 
+  let feedbackCfg;
   try {
-    s3.getObject({Bucket: bucket, Key: feedbackConfig}, function(err, data) {
-      if (err) {
-        console.log(`Error from s3.getObject (${bucket}/${feedbackConfig})`, err);
-      } else {
-        demoFeedbacks(JSON.parse(data.Body.toString('utf-8')));
-      }
-    });
+    feedbackCfg = await getConfig(bucket, feedbackConfig);
   } catch (e) {
-    console.log(`Unable to load lead submission configuration from S3 (${bucket}/${feedbackConfig})`, e);
+    console.log(`Error loading feedback submission configuration from S3 (${bucket}/${feedbackConfig})`, e);
+  }
+  if (feedbackCfg) {
+    try {
+      await demoFeedbacks(feedbackCfg);
+    } catch (e) {
+      console.log('Error processing feedback submissions', e);
+    }
   }
 }
 
@@ -56,4 +80,4 @@ module.exports = {
   lambda,
   demoLeads,
   demoFeedbacks
-}
+};

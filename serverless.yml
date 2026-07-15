@@ -1,0 +1,59 @@
+service: test-sales-and-dev-leads
+
+frameworkVersion: "3"
+
+package:
+  individually: true
+  # Never bundle local demo keys into the artifact. demoConfig/keys.json is
+  # gitignored but may still exist in a break-glass local checkout; Serverless
+  # does not honor .gitignore, and getDemoKeys() prefers a local file over
+  # Secrets Manager. Excluding it guarantees the deployed Lambda always resolves
+  # keys from Secrets Manager at runtime.
+  patterns:
+    - '!demoConfig/**'
+  # serverless-plugin-include-dependencies excludes node_modules then adds back
+  # only the files the handler actually requires, so dev dependencies are never
+  # bundled. excludeDevDependencies is left false to defer entirely to the
+  # plugin (and skip Serverless's own slower dev-dependency pruning pass).
+  excludeDevDependencies: false
+
+plugins:
+  - serverless-plugin-include-dependencies
+
+provider:
+  name: aws
+  stage: staging
+  region: us-east-1
+  runtime: nodejs24.x
+  architecture: x86_64
+  memorySize: 128
+  timeout: 60
+  environment:
+    # Only the (non-sensitive) Secrets Manager secret id lives in the Lambda
+    # environment - never the keys themselves. lib/demokeys.js reads this at
+    # runtime and calls GetSecretValue. The secret is the Doppler -> Secrets
+    # Manager single-secret sync target for the leadconduit-lambdas project's
+    # staging_testlead config: its value is a JSON object of that config's keys,
+    # so the demo API keys map (account name -> LeadConduit API key) lives under
+    # the DEMO_KEYS key (getDemoKeys unwraps it).
+    DEMO_KEYS_SECRET_ID: leadconduit-lambdas-staging-testlead-doppler
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource: arn:aws:s3:::sales-and-dev-leads-config/*
+        # Runtime read of the demo API keys from Secrets Manager. The trailing
+        # -* matches the random 6-char suffix Secrets Manager appends to the ARN.
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: arn:aws:secretsmanager:us-east-1:371005981288:secret:leadconduit-lambdas-staging-testlead-doppler-*
+
+functions:
+  testLeads:
+    name: test-sales-and-dev-leads
+    handler: index.lambda
+    events:
+      - schedule: rate(1 minute)
