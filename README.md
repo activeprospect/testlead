@@ -98,7 +98,7 @@ Automated **feedback** also needs the demo API keys: a JSON map of account name 
 }
 ```
 
-These keys are not bundled into the deploy artifact and are never placed in the Lambda's environment. They live in an AWS Secrets Manager secret (`leadconduit-lambdas/staging/test-sales-and-dev-leads`) in the **LeadConduit staging** account, whose value is a JSON map of the shape above. Doppler is the source of truth and syncs into Secrets Manager (project `leadconduit-lambdas`). At runtime the Lambda calls `GetSecretValue` (via `lib/demokeys.js`) using its function role; only the non-sensitive secret id is exposed as the `DEMO_KEYS_SECRET_ID` environment variable.
+These keys are not bundled into the deploy artifact and are never placed in the Lambda's environment. They live in an AWS Secrets Manager secret (`leadconduit-lambdas-staging-testlead-doppler`) in the **LeadConduit staging** account. Doppler is the source of truth and syncs into Secrets Manager via a single-secret sync of the `leadconduit-lambdas` project's `staging_testlead` config, so the secret's value is a JSON object of that config's keys — the map above is stored (as a JSON string) under the `DEMO_KEYS` key, alongside Doppler's `DOPPLER_*` metadata keys. At runtime the Lambda calls `GetSecretValue` (via `lib/demokeys.js`) using its function role, unwraps the `DEMO_KEYS` entry, and parses it; only the non-sensitive secret id is exposed as the `DEMO_KEYS_SECRET_ID` environment variable.
 
 #### Local key resolution
 
@@ -106,9 +106,9 @@ When you run the keys-dependent code locally (e.g. `lib/manualdemo.js`), `getDem
 
 1. `DEMO_KEYS` — inline JSON in the environment (e.g. via `doppler run`). Highest priority.
 2. A local JSON file — `DEMO_KEYS_FILE` if set, otherwise `demoConfig/keys.json` (the previous local-dev workflow).
-3. AWS Secrets Manager — reads the `DEMO_KEYS_SECRET_ID` secret (default `leadconduit-lambdas/staging/test-sales-and-dev-leads`) using your default AWS credentials. This is the source the deployed Lambda uses. If you are not logged in, it prints guidance: run `aws sso login --profile <profile>` (or `aws_auth`) and set `AWS_PROFILE` to select your role, then retry.
+3. AWS Secrets Manager — reads the `DEMO_KEYS_SECRET_ID` secret (default `leadconduit-lambdas-staging-testlead-doppler`) using your default AWS credentials, unwrapping the `DEMO_KEYS` key from the Doppler-synced payload. This is the source the deployed Lambda uses. If you are not logged in, it prints guidance: run `aws sso login --profile <profile>` (or `aws_auth`) and set `AWS_PROFILE` to select your role, then retry.
 
-Configuration knobs (all optional): `DEMO_KEYS`, `DEMO_KEYS_FILE`, `DEMO_KEYS_SECRET_ID` (default `leadconduit-lambdas/staging/test-sales-and-dev-leads`), `DEMO_KEYS_SOURCE` (force `env` | `file` | `secretsmanager`), and `DEMO_KEYS_DISABLE_AWS` (skip the Secrets Manager fallback, e.g. offline/CI). Standard AWS env (`AWS_PROFILE`, `AWS_REGION`) governs which role/region the Secrets Manager read uses.
+Configuration knobs (all optional): `DEMO_KEYS`, `DEMO_KEYS_FILE`, `DEMO_KEYS_SECRET_ID` (default `leadconduit-lambdas-staging-testlead-doppler`), `DEMO_KEYS_SOURCE` (force `env` | `file` | `secretsmanager`), and `DEMO_KEYS_DISABLE_AWS` (skip the Secrets Manager fallback, e.g. offline/CI). Standard AWS env (`AWS_PROFILE`, `AWS_REGION`) governs which role/region the Secrets Manager read uses.
 
 ### Deployment
 

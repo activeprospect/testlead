@@ -14,7 +14,7 @@ const DEMO_KEYS_ENV_VARS = [
   'DEMO_KEYS_DISABLE_AWS'
 ];
 
-const DEFAULT_SECRET_ID = 'leadconduit-lambdas/staging/test-sales-and-dev-leads';
+const DEFAULT_SECRET_ID = 'leadconduit-lambdas-staging-testlead-doppler';
 
 describe('demokeys getDemoKeys', () => {
   let savedEnv;
@@ -89,6 +89,25 @@ describe('demokeys getDemoKeys', () => {
     const keys = await getDemoKeys();
     expect(keys).to.deep.equal({ 'SM Acct': 'key-sm' });
     expect(sentCommand.input.SecretId).to.equal(DEFAULT_SECRET_ID);
+  });
+
+  it('unwraps the DEMO_KEYS key from a Doppler single-secret sync payload', async () => {
+    // Doppler's single-secret sync stores the whole config as a JSON object with
+    // each value serialized as a string, so the account -> key map arrives nested
+    // (and double-encoded) under DEMO_KEYS alongside the DOPPLER_* metadata keys.
+    const map = { 'ActiveProspect, Inc.': 'key-ap', 'ActiveProspect, Inc. Demo': 'key-demo' };
+    SecretsManagerClient.prototype.send = async function () {
+      return {
+        SecretString: JSON.stringify({
+          DEMO_KEYS: JSON.stringify(map),
+          DOPPLER_PROJECT: 'leadconduit-lambdas',
+          DOPPLER_CONFIG: 'staging_testlead',
+          DOPPLER_ENVIRONMENT: 'staging'
+        })
+      };
+    };
+    const keys = await getDemoKeys();
+    expect(keys).to.deep.equal(map);
   });
 
   it('honors DEMO_KEYS_SECRET_ID for the Secrets Manager fetch', async () => {
